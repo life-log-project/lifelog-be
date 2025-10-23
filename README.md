@@ -1,2 +1,2 @@
-# life-log-be
-일상 기록 프로젝트 (백엔드)
+# lifelog-be
+Express 기반의 REST API 백엔드
