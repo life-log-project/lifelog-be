@@ -1,0 +1,90 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String  @id @default(uuid())
+  email        String  @unique
+  name         String?
+  passwordHash String?
+
+  // OAuth 연동 필드 
+  googleId     String? @unique
+  naverId      String? @unique
+  kakaoId      String? @unique
+  refreshToken String? // 현재 활성 상태의 Refresh Token
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 라이프로그 관계 정의
+  logs              LogEntry[] // 사용자의 모든 기록
+  customRecordTypes UserRecordType[] // 사용자가 정의한 기록 유형
+}
+
+// ENUM: 시스템 정의 Log 유형
+enum LogType {
+  EXERCISE // 운동
+  BIO_ACTIVITY // 생체 활동
+  PERIOD_CYCLE // 생리 주기 (기간성)
+  SELF_IMPROVEMENT // 자기계발
+  SCHEDULE // 약속/일정
+  GENERAL // 자유 기록
+}
+
+// 사용자 정의 기록 유형 (User-Defined Record Type)
+model UserRecordType {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  createdAt DateTime @default(now())
+
+  logs LogEntry[]
+  User User       @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+//  실제 기록 데이터 (Log Entry)
+model LogEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  logDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 공유 및 공개 상태
+  isPrivate     Boolean  @default(false) // 기본값은 공개
+  relatedUsers  String[]
+  originalLogId String?
+
+  // 데이터 필드
+  memoText  String?
+  photoUrls String[]
+  periodEnd DateTime?
+
+  // 유형 분류 (하이브리드)
+  systemType LogType? // 시스템 정의 유형
+
+  // 사용자 정의 유형 참조
+  userRecordTypeId String?
+  userRecordType   UserRecordType? @relation(fields: [userRecordTypeId], references: [id])
+
+  // 추가 메타데이터 (유형별 고유 속성 저장)
+  metaData Json?
+  User     User  @relation(fields: [userId], references: [id])
+
+  @@index([userId, logDate])
+}
